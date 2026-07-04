@@ -15,8 +15,12 @@ jobs:
         run: |
           ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
           echo "Found zip: $ZIP_FILE"
-          mkdir -p project
-          unzip -o "$ZIP_FILE" -d project
+          mkdir -p project_raw
+          unzip -o "$ZIP_FILE" -d project_raw
+          # zip এর ভেতরে nested ফোল্ডার থাকলেও build.gradle খুঁজে বের করে project ফোল্ডারে নিয়ে আসবে
+          GRADLE_ROOT=$(find project_raw -maxdepth 3 -name "settings.gradle" -exec dirname {} \; | head -n 1)
+          echo "Gradle root found at: $GRADLE_ROOT"
+          mv "$GRADLE_ROOT" project
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -32,7 +36,7 @@ jobs:
       - name: Generate debug keystore
         working-directory: project
         run: |
-          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
 
       - name: Build Debug APK
         working-directory: project
@@ -43,4 +47,3 @@ jobs:
         with:
           name: PlayVibe-app-debug
           path: project/app/build/outputs/apk/debug/app-debug.apk
-          
